@@ -20,11 +20,11 @@ export interface UserAccount extends CosmicObject {
       key: 'product-creator' | 'content-creator';
       value: 'Product Creator' | 'Content Creator';
     };
-    profile_reference?: string;
+    profile_reference: string;
     email_verified: boolean;
-    email_verification_token?: string;
-    password_reset_token?: string;
-    last_login?: string;
+    email_verification_token: string;
+    password_reset_token: string;
+    last_login: string;
   };
 }
 

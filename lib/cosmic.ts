@@ -142,8 +142,9 @@ export async function createUserAccount(userData: {
         },
         email_verified: false,
         profile_reference: '',
-        email_verification_token: null,
-        password_reset_token: null
+        email_verification_token: '',
+        password_reset_token: '',
+        last_login: ''
       }
     });
     
