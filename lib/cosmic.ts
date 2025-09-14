@@ -127,20 +127,29 @@ export async function createUserAccount(userData: {
   accountType: 'product-creator' | 'content-creator';
 }) {
   try {
+    // Create the account type object structure to match existing data
+    const accountTypeValue = userData.accountType === 'content-creator' ? 'Content Creator' : 'Product Creator';
+    
     const response = await cosmic.objects.insertOne({
       type: 'user-accounts',
       title: `${userData.email} Account`,
       metadata: {
         email: userData.email,
         password_hash: userData.passwordHash,
-        account_type: userData.accountType,
+        account_type: {
+          key: userData.accountType,
+          value: accountTypeValue
+        },
         email_verified: false,
-        profile_reference: ''
+        profile_reference: '',
+        email_verification_token: null,
+        password_reset_token: null
       }
     });
     
     return response.object;
   } catch (error) {
+    console.error('Create user account error:', error);
     throw new Error('Failed to create user account');
   }
 }

@@ -3,8 +3,10 @@ import { signup } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, accountType } = await request.json()
+    const body = await request.json()
+    const { name, email, password, accountType } = body
 
+    // Validation
     if (!name || !email || !password || !accountType) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -15,6 +17,22 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters' },
+        { status: 400 }
+      )
+    }
+
+    if (!['content-creator', 'product-creator'].includes(accountType)) {
+      return NextResponse.json(
+        { error: 'Invalid account type' },
+        { status: 400 }
+      )
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
         { status: 400 }
       )
     }
@@ -31,7 +49,7 @@ export async function POST(request: NextRequest) {
       token: result.token
     })
   } catch (error: any) {
-    console.error('Signup error:', error)
+    console.error('Signup API error:', error)
     
     if (error.message === 'User already exists with this email') {
       return NextResponse.json(
@@ -41,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to create account' },
+      { error: 'Failed to create account. Please try again.' },
       { status: 500 }
     )
   }

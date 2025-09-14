@@ -26,58 +26,68 @@ export function verifyToken(token: string): AuthUser | null {
 }
 
 export async function signup(data: SignupData) {
-  // Check if user already exists
-  const existingUser = await getUserByEmail(data.email);
-  if (existingUser) {
-    throw new Error('User already exists with this email');
+  try {
+    // Check if user already exists
+    const existingUser = await getUserByEmail(data.email);
+    if (existingUser) {
+      throw new Error('User already exists with this email');
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(data.password);
+
+    // Create user account
+    const userAccount = await createUserAccount({
+      email: data.email,
+      passwordHash,
+      accountType: data.accountType
+    });
+
+    // Generate JWT token with proper type handling
+    const authUser: AuthUser = {
+      id: userAccount.id,
+      email: userAccount.metadata.email,
+      accountType: userAccount.metadata.account_type.key,
+      profileReference: userAccount.metadata.profile_reference || ''
+    };
+
+    const token = generateToken(authUser);
+
+    return { user: authUser, token };
+  } catch (error) {
+    console.error('Signup error:', error);
+    throw error;
   }
-
-  // Hash password
-  const passwordHash = await hashPassword(data.password);
-
-  // Create user account
-  const userAccount = await createUserAccount({
-    email: data.email,
-    passwordHash,
-    accountType: data.accountType
-  });
-
-  // Generate JWT token
-  const authUser: AuthUser = {
-    id: userAccount.id,
-    email: userAccount.metadata.email,
-    accountType: userAccount.metadata.account_type.key,
-    profileReference: userAccount.metadata.profile_reference
-  };
-
-  const token = generateToken(authUser);
-
-  return { user: authUser, token };
 }
 
 export async function login(credentials: LoginCredentials) {
-  const user = await getUserByEmail(credentials.email);
-  if (!user) {
-    throw new Error('User not found');
+  try {
+    const user = await getUserByEmail(credentials.email);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const isValidPassword = await verifyPassword(
+      credentials.password,
+      user.metadata.password_hash
+    );
+
+    if (!isValidPassword) {
+      throw new Error('Invalid password');
+    }
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.metadata.email,
+      accountType: user.metadata.account_type.key,
+      profileReference: user.metadata.profile_reference || ''
+    };
+
+    const token = generateToken(authUser);
+
+    return { user: authUser, token };
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
   }
-
-  const isValidPassword = await verifyPassword(
-    credentials.password,
-    user.metadata.password_hash
-  );
-
-  if (!isValidPassword) {
-    throw new Error('Invalid password');
-  }
-
-  const authUser: AuthUser = {
-    id: user.id,
-    email: user.metadata.email,
-    accountType: user.metadata.account_type.key,
-    profileReference: user.metadata.profile_reference
-  };
-
-  const token = generateToken(authUser);
-
-  return { user: authUser, token };
 }
