@@ -19,13 +19,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Check for existing token on mount
     const token = localStorage.getItem('auth_token')
     if (token) {
-      const verifiedUser = verifyToken(token)
-      if (verifiedUser) {
-        setUser(verifiedUser)
-      } else {
-        // Token is invalid, remove it
+      try {
+        const verifiedUser = verifyToken(token)
+        if (verifiedUser) {
+          setUser(verifiedUser)
+        } else {
+          // Token is invalid, remove it
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('user')
+        }
+      } catch (error) {
+        console.error('Token verification error:', error)
+        // Clean up invalid token
         localStorage.removeItem('auth_token')
         localStorage.removeItem('user')
       }
@@ -34,32 +42,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = (token: string, userData: AuthUser) => {
-    localStorage.setItem('auth_token', token)
-    localStorage.setItem('user', JSON.stringify(userData))
-    setUser(userData)
+    try {
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('user', JSON.stringify(userData))
+      setUser(userData)
+    } catch (error) {
+      console.error('Login storage error:', error)
+    }
   }
 
   const logout = () => {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('signup_email')
-    setUser(null)
+    try {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('signup_email')
+      setUser(null)
+    } catch (error) {
+      console.error('Logout storage error:', error)
+      // Still clear the user state even if localStorage fails
+      setUser(null)
+    }
+  }
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout
   }
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      isLoading,
-      login,
-      logout
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')
