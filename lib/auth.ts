@@ -37,8 +37,8 @@ export async function signup(data: SignupData) {
     // Hash password
     const passwordHash = await hashPassword(data.password);
 
-    // Generate email verification token
-    const verificationToken = crypto.randomUUID();
+    // Generate email verification token using Web Crypto API
+    const verificationToken = globalThis.crypto.randomUUID();
 
     // Create user account
     const userAccount = await createUserAccount({
@@ -48,8 +48,13 @@ export async function signup(data: SignupData) {
       verificationToken
     });
 
-    // Send verification email
-    await sendVerificationEmail(data.email, verificationToken);
+    // Send verification email before returning success
+    try {
+      await sendVerificationEmail(data.email, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail signup if email fails, but log the error
+    }
 
     // Generate JWT token with proper type handling
     const authUser: AuthUser = {

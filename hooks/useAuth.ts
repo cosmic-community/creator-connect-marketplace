@@ -213,13 +213,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     clearError
   }
-  // return (
-  //   <AuthContext.Provider value={contextValue}>
-  //   {children}
-  //   </AuthContext.Provider>
-  // )
 
-  return children
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth(): AuthContextType {

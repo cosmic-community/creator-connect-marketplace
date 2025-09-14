@@ -4,9 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -32,9 +34,8 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Store the token
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+        // Use auth context to handle login
+        await login(data.token, data.user)
         
         // Redirect based on account type
         if (data.user.accountType === 'content-creator') {

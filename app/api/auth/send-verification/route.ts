@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate new verification token
-    const verificationToken = crypto.randomUUID()
+    // Generate new verification token using Web Crypto API
+    const verificationToken = globalThis.crypto.randomUUID()
 
     // Update user with new verification token
     await cosmic.objects.updateOne(user.id, {
