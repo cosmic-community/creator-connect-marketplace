@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Send email to creator using Resend
     await resend.emails.send({
-      from: 'Creator Connect <noreply@creatorconnect.com>',
+      from: 'Creator Connect <support@cosmicjs.com>',
       to: creatorEmail,
       reply_to: email,
       subject: `New Partnership Opportunity: ${subject}`,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
           
           <p style="color: #64748b; font-size: 14px;">
             This message was sent through Creator Connect. If you didn't expect this message, 
-            please contact support.
+            please contact support at support@cosmicjs.com.
           </p>
         </div>
       `
