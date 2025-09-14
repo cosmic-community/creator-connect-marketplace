@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     await resend.emails.send({
       from: 'Creator Connect <noreply@creatorconnect.com>',
       to: creatorEmail,
-      replyTo: email,
+      reply_to: email,
       subject: `New Partnership Opportunity: ${subject}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
