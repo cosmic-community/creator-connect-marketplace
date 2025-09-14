@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AuthUser, SignupData, LoginCredentials } from '@/types';
 import { createUserAccount, getUserByEmail } from './cosmic';
+import { sendVerificationEmail } from './email';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -36,12 +37,19 @@ export async function signup(data: SignupData) {
     // Hash password
     const passwordHash = await hashPassword(data.password);
 
+    // Generate email verification token
+    const verificationToken = crypto.randomUUID();
+
     // Create user account
     const userAccount = await createUserAccount({
       email: data.email,
       passwordHash,
-      accountType: data.accountType
+      accountType: data.accountType,
+      verificationToken
     });
+
+    // Send verification email
+    await sendVerificationEmail(data.email, verificationToken);
 
     // Generate JWT token with proper type handling
     const authUser: AuthUser = {

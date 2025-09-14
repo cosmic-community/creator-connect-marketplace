@@ -125,6 +125,7 @@ export async function createUserAccount(userData: {
   email: string;
   passwordHash: string;
   accountType: 'product-creator' | 'content-creator';
+  verificationToken?: string;
 }) {
   try {
     // Create the account type object structure to match existing data
@@ -141,10 +142,10 @@ export async function createUserAccount(userData: {
           value: accountTypeValue
         },
         email_verified: false,
-        profile_reference: '',
-        email_verification_token: '',
-        password_reset_token: '',
-        last_login: ''
+        profile_reference: null,
+        email_verification_token: userData.verificationToken || null,
+        password_reset_token: null,
+        last_login: null
       }
     });
     
@@ -171,5 +172,18 @@ export async function getUserByEmail(email: string) {
       return null;
     }
     throw new Error('Failed to fetch user');
+  }
+}
+
+// Update user last login
+export async function updateLastLogin(userId: string) {
+  try {
+    await cosmic.objects.updateOne(userId, {
+      metadata: {
+        last_login: new Date().toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('Failed to update last login:', error);
   }
 }

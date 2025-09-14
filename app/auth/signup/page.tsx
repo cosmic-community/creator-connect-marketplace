@@ -47,15 +47,11 @@ export default function SignupPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Store the token
-        localStorage.setItem('auth_token', data.token)
+        // Store email for potential resend verification
+        localStorage.setItem('signup_email', formData.email)
         
-        // Redirect based on account type
-        if (formData.accountType === 'content-creator') {
-          router.push('/content-creators')
-        } else {
-          router.push('/product-creators')
-        }
+        // Redirect to success page
+        router.push('/auth/signup-success')
       } else {
         setError(data.error || 'Failed to create account')
       }
