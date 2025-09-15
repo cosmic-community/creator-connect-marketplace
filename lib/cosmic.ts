@@ -178,6 +178,25 @@ export async function getUserByEmail(email: string) {
   }
 }
 
+// Find user account by ID
+export async function getUserById(id: string) {
+  try {
+    const response = await cosmic.objects
+      .findOne({
+        id: id,
+        type: "user-accounts"
+      })
+      .props(["id", "title", "slug", "metadata"]);
+
+    return response.object || null;
+  } catch (error) {
+    if (hasStatus(error) && error.status === 404) {
+      return null;
+    }
+    throw new Error("Failed to fetch user");
+  }
+}
+
 // Update user last login
 export async function updateLastLogin(userId: string) {
   try {
@@ -188,5 +207,19 @@ export async function updateLastLogin(userId: string) {
     });
   } catch (error) {
     console.error("Failed to update last login:", error);
+  }
+}
+
+// Update user account with profile reference
+export async function updateUserProfileReference(userId: string, profileSlug: string) {
+  try {
+    await cosmic.objects.updateOne(userId, {
+      metadata: {
+        profile_reference: profileSlug,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update profile reference:", error);
+    throw new Error("Failed to update profile reference");
   }
 }
