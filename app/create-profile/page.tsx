@@ -1,103 +1,62 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
-import { Camera, Upload, X, Plus, Loader2 } from 'lucide-react'
-import AuthenticatedNavigation from '@/components/AuthenticatedNavigation'
+import { useAuth, isContentCreator, isProductCreator } from '@/hooks/useAuth'
+import { User, Building2, Camera, Plus, X, MapPin, Globe, DollarSign, Users, Tag } from 'lucide-react'
 
-interface Category {
-  id: string
-  title: string
-  slug: string
-  metadata: {
-    category_name: string
-    description: string
-    category_icon: string
-    category_type: {
-      key: string
-      value: string
-    }
-  }
-}
-
-interface ContentCreatorFormData {
-  creator_name: string
-  bio: string
-  profile_photo: File | null
-  content_categories: string[]
-  platform_specialties: string[]
-  follower_count_range: string
-  rate_range: string
-  services_offered: string[]
-  portfolio_images: File[]
-  social_media_links: {
-    youtube?: string
-    instagram?: string
-    tiktok?: string
-    twitter?: string
-    linkedin?: string
-    website?: string
-  }
-  website_url: string
-  location: string
-  tags: string
-}
-
-interface ProductCreatorFormData {
-  company_name: string
-  contact_person: string
-  company_description: string
-  website_url: string
-  industry_category: string
-  looking_for: string[]
-  budget_range: string
-  project_type: string
-  company_logo: File | null
-  phone_number: string
-  location: string
-  tags: string
+// Define the social media links type with proper index signature
+interface SocialMediaLinks {
+  youtube?: string
+  instagram?: string
+  tiktok?: string
+  twitter?: string
+  linkedin?: string
+  website?: string
+  [key: string]: string | undefined // Add index signature for dynamic access
 }
 
 export default function CreateProfilePage() {
-  const { user, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
+  const { user, isLoading } = useAuth()
+  
   // Content Creator Form State
-  const [contentCreatorData, setContentCreatorData] = useState<ContentCreatorFormData>({
+  const [contentCreatorForm, setContentCreatorForm] = useState({
     creator_name: '',
     bio: '',
-    profile_photo: null,
-    content_categories: [],
-    platform_specialties: [],
+    content_categories: [] as string[],
+    platform_specialties: [] as string[],
     follower_count_range: '',
     rate_range: '',
-    services_offered: [],
-    portfolio_images: [],
-    social_media_links: {},
+    services_offered: [] as string[],
+    social_media_links: {} as SocialMediaLinks,
     website_url: '',
     location: '',
     tags: ''
   })
 
   // Product Creator Form State
-  const [productCreatorData, setProductCreatorData] = useState<ProductCreatorFormData>({
+  const [productCreatorForm, setProductCreatorForm] = useState({
     company_name: '',
     contact_person: '',
     company_description: '',
     website_url: '',
     industry_category: '',
-    looking_for: [],
+    looking_for: [] as string[],
     budget_range: '',
     project_type: '',
-    company_logo: null,
     phone_number: '',
     location: '',
     tags: ''
   })
+
+  // UI State
+  const [activeTab, setActiveTab] = useState<'content-creator' | 'product-creator'>('content-creator')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [categories, setCategories] = useState<any[]>([])
+  const [newSocialPlatform, setNewSocialPlatform] = useState('')
+  const [newSocialUrl, setNewSocialUrl] = useState('')
 
   // Load categories on mount
   useEffect(() => {
@@ -106,7 +65,7 @@ export default function CreateProfilePage() {
         const response = await fetch('/api/categories')
         if (response.ok) {
           const data = await response.json()
-          setCategories(data)
+          setCategories(data.categories || [])
         }
       } catch (error) {
         console.error('Failed to load categories:', error)
@@ -115,768 +74,734 @@ export default function CreateProfilePage() {
     loadCategories()
   }, [])
 
-  // Redirect if not authenticated
+  // Set active tab based on user account type
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login')
+    if (user && !isLoading) {
+      setActiveTab(user.accountType === 'content-creator' ? 'content-creator' : 'product-creator')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [user, isLoading])
+
+  // Redirect if not authenticated
+  if (!isLoading && !user) {
+    router.push('/auth/login')
+    return null
+  }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <AuthenticatedNavigation />
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
   }
 
-  if (!isAuthenticated || !user) {
-    return null
-  }
-
-  const handleFileUpload = (file: File, field: string) => {
-    if (user.accountType === 'content-creator') {
-      if (field === 'profile_photo') {
-        setContentCreatorData(prev => ({ ...prev, profile_photo: file }))
-      } else if (field === 'portfolio_images') {
-        setContentCreatorData(prev => ({
-          ...prev,
-          portfolio_images: [...prev.portfolio_images, file]
-        }))
-      }
-    } else {
-      setProductCreatorData(prev => ({ ...prev, company_logo: file }))
-    }
-  }
-
-  const removePortfolioImage = (index: number) => {
-    setContentCreatorData(prev => ({
-      ...prev,
-      portfolio_images: prev.portfolio_images.filter((_, i) => i !== index)
-    }))
-  }
-
-  const addToArray = (field: string, value: string) => {
-    if (user.accountType === 'content-creator') {
-      setContentCreatorData(prev => ({
-        ...prev,
-        [field]: [...(prev[field as keyof ContentCreatorFormData] as string[]), value]
-      }))
-    } else {
-      setProductCreatorData(prev => ({
-        ...prev,
-        [field]: [...(prev[field as keyof ProductCreatorFormData] as string[]), value]
-      }))
-    }
-  }
-
-  const removeFromArray = (field: string, index: number) => {
-    if (user.accountType === 'content-creator') {
-      setContentCreatorData(prev => ({
-        ...prev,
-        [field]: (prev[field as keyof ContentCreatorFormData] as string[]).filter((_, i) => i !== index)
-      }))
-    } else {
-      setProductCreatorData(prev => ({
-        ...prev,
-        [field]: (prev[field as keyof ProductCreatorFormData] as string[]).filter((_, i) => i !== index)
-      }))
-    }
-  }
-
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     setIsSubmitting(true)
-    setError(null)
 
     try {
-      const formData = new FormData()
-      formData.append('accountType', user.accountType)
-      formData.append('userId', user.id)
-
-      if (user.accountType === 'content-creator') {
-        Object.entries(contentCreatorData).forEach(([key, value]) => {
-          if (key === 'profile_photo' && value) {
-            formData.append('profile_photo', value as File)
-          } else if (key === 'portfolio_images' && Array.isArray(value)) {
-            (value as File[]).forEach((file, index) => {
-              formData.append(`portfolio_image_${index}`, file)
-            })
-          } else if (key === 'social_media_links') {
-            formData.append(key, JSON.stringify(value))
-          } else if (Array.isArray(value)) {
-            formData.append(key, JSON.stringify(value))
-          } else {
-            formData.append(key, String(value))
-          }
-        })
-      } else {
-        Object.entries(productCreatorData).forEach(([key, value]) => {
-          if (key === 'company_logo' && value) {
-            formData.append('company_logo', value as File)
-          } else if (Array.isArray(value)) {
-            formData.append(key, JSON.stringify(value))
-          } else {
-            formData.append(key, String(value))
-          }
-        })
-      }
-
+      const formData = activeTab === 'content-creator' ? contentCreatorForm : productCreatorForm
+      
       const response = await fetch('/api/profile/create', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          profileType: activeTab,
+          profileData: formData,
+        }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create profile')
-      }
+      const data = await response.json()
 
-      const result = await response.json()
-      
-      // Redirect to the new profile
-      if (user.accountType === 'content-creator') {
-        router.push(`/content-creators/${result.slug}`)
+      if (response.ok) {
+        // Redirect to profile page or dashboard
+        router.push(activeTab === 'content-creator' ? '/content-creators' : '/product-creators')
       } else {
-        router.push(`/product-creators`)
+        setError(data.error || 'Failed to create profile')
       }
-
     } catch (error) {
       console.error('Profile creation error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to create profile')
+      setError('Failed to create profile. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const platformOptions = [
-    'YouTube', 'Instagram', 'TikTok', 'Twitter', 'LinkedIn', 'Blog', 'Podcast'
-  ]
+  // Handle social media link addition
+  const addSocialMediaLink = () => {
+    if (newSocialPlatform && newSocialUrl) {
+      setContentCreatorForm(prev => ({
+        ...prev,
+        social_media_links: {
+          ...prev.social_media_links,
+          [newSocialPlatform.toLowerCase()]: newSocialUrl
+        }
+      }))
+      setNewSocialPlatform('')
+      setNewSocialUrl('')
+    }
+  }
 
-  const serviceOptions = [
-    'Product Reviews', 'Sponsored Posts', 'Content Creation', 'Brand Partnerships',
-    'Video Production', 'Photography', 'Consulting', 'Event Appearances'
-  ]
+  // Handle social media link removal - Fixed the TypeScript error
+  const removeSocialMediaLink = (platform: string) => {
+    setContentCreatorForm(prev => {
+      const newLinks = { ...prev.social_media_links }
+      delete newLinks[platform]
+      return {
+        ...prev,
+        social_media_links: newLinks
+      }
+    })
+  }
 
-  const lookingForOptions = [
-    'YouTube Creators', 'Instagram Influencers', 'TikTok Creators', 'Bloggers',
-    'LinkedIn Creators', 'Podcast Hosts', 'Event Speakers'
-  ]
+  // Handle array field updates
+  const handleArrayField = (
+    field: string, 
+    value: string, 
+    formType: 'content-creator' | 'product-creator'
+  ) => {
+    const setForm = formType === 'content-creator' ? setContentCreatorForm : setProductCreatorForm
+    
+    setForm(prev => {
+      const currentArray = (prev as any)[field] || []
+      const newArray = currentArray.includes(value)
+        ? currentArray.filter((item: string) => item !== value)
+        : [...currentArray, value]
+      
+      return {
+        ...prev,
+        [field]: newArray
+      }
+    })
+  }
 
-  const followerRanges = [
-    { key: 'micro', value: '1K - 10K (Micro)' },
-    { key: 'mid-tier', value: '10K - 100K (Mid-tier)' },
-    { key: 'macro', value: '100K - 1M (Macro)' },
-    { key: 'mega', value: '1M+ (Mega)' }
-  ]
-
-  const rateRanges = [
-    { key: 'budget', value: 'Under $500' },
-    { key: 'mid-range', value: '$500 - $2,000' },
-    { key: 'premium', value: '$2,000 - $10,000' },
-    { key: 'enterprise', value: '$10,000+' }
-  ]
-
-  const budgetRanges = [
-    { key: 'under-1k', value: 'Under $1,000' },
-    { key: '1k-5k', value: '$1,000 - $5,000' },
-    { key: '5k-10k', value: '$5,000 - $10,000' },
-    { key: '10k-25k', value: '$10,000 - $25,000' },
-    { key: '25k-plus', value: '$25,000+' }
-  ]
-
-  const projectTypes = [
-    { key: 'product-launch', value: 'Product Launch' },
-    { key: 'brand-awareness', value: 'Brand Awareness' },
-    { key: 'content-series', value: 'Content Series' },
-    { key: 'review-campaign', value: 'Review Campaign' },
-    { key: 'ongoing-partnership', value: 'Ongoing Partnership' }
-  ]
+  // Filter categories by type
+  const contentCategories = categories.filter(cat => 
+    cat.metadata?.category_type?.key === 'content'
+  )
+  const industryCategories = categories.filter(cat => 
+    cat.metadata?.category_type?.key === 'industry'
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AuthenticatedNavigation />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Create Your Profile
-              </h1>
-              <p className="text-gray-600">
-                {user.accountType === 'content-creator' 
-                  ? 'Set up your content creator profile to connect with brands and companies.'
-                  : 'Set up your company profile to find and connect with content creators.'
-                }
-              </p>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4 max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Create Your Profile
+          </h1>
+          <p className="text-gray-600">
+            Tell us about yourself to connect with the right opportunities
+          </p>
+        </div>
+
+        {/* Tab Navigation - Only show if user can switch */}
+        {user && (
+          <div className="mb-8">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('content-creator')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'content-creator'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } ${user.accountType !== 'content-creator' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={user.accountType !== 'content-creator'}
+                >
+                  <User className="w-4 h-4 inline mr-2" />
+                  Content Creator Profile
+                </button>
+                <button
+                  onClick={() => setActiveTab('product-creator')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'product-creator'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } ${user.accountType !== 'product-creator' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={user.accountType !== 'product-creator'}
+                >
+                  <Building2 className="w-4 h-4 inline mr-2" />
+                  Product Creator Profile
+                </button>
+              </nav>
             </div>
+          </div>
+        )}
 
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600">{error}</p>
-              </div>
-            )}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {user.accountType === 'content-creator' ? (
-                <>
-                  {/* Basic Information */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Basic Information</h2>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Creator Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contentCreatorData.creator_name}
-                        onChange={(e) => setContentCreatorData(prev => ({ ...prev, creator_name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Your creator name or brand name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Bio *
-                      </label>
-                      <textarea
-                        required
-                        rows={4}
-                        value={contentCreatorData.bio}
-                        onChange={(e) => setContentCreatorData(prev => ({ ...prev, bio: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Tell us about yourself, your content, and what makes you unique..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Profile Photo
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                          {contentCreatorData.profile_photo ? (
-                            <img
-                              src={URL.createObjectURL(contentCreatorData.profile_photo)}
-                              alt="Profile preview"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Camera className="w-8 h-8 text-gray-400" />
-                          )}
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleFileUpload(file, 'profile_photo')
-                          }}
-                          className="hidden"
-                          id="profile-photo"
-                        />
-                        <label
-                          htmlFor="profile-photo"
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer flex items-center space-x-2"
-                        >
-                          <Upload className="w-4 h-4" />
-                          <span>Upload Photo</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content Categories */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Content Categories</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {categories.map((category) => (
-                        <label
-                          key={category.id}
-                          className="flex items-center space-x-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={contentCreatorData.content_categories.includes(category.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setContentCreatorData(prev => ({
-                                  ...prev,
-                                  content_categories: [...prev.content_categories, category.id]
-                                }))
-                              } else {
-                                setContentCreatorData(prev => ({
-                                  ...prev,
-                                  content_categories: prev.content_categories.filter(id => id !== category.id)
-                                }))
-                              }
-                            }}
-                            className="rounded text-blue-600"
-                          />
-                          <span className="text-xl">{category.metadata.category_icon}</span>
-                          <span className="text-sm font-medium">{category.metadata.category_name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Platform Specialties */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Platform Specialties</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {platformOptions.map((platform) => (
-                        <label
-                          key={platform}
-                          className="flex items-center space-x-2 p-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={contentCreatorData.platform_specialties.includes(platform)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                addToArray('platform_specialties', platform)
-                              } else {
-                                const index = contentCreatorData.platform_specialties.indexOf(platform)
-                                if (index > -1) removeFromArray('platform_specialties', index)
-                              }
-                            }}
-                            className="rounded text-blue-600"
-                          />
-                          <span className="text-sm">{platform}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Audience & Rates */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Follower Count Range
-                      </label>
-                      <select
-                        value={contentCreatorData.follower_count_range}
-                        onChange={(e) => setContentCreatorData(prev => ({ ...prev, follower_count_range: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select follower range</option>
-                        {followerRanges.map((range) => (
-                          <option key={range.key} value={range.key}>{range.value}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Rate Range
-                      </label>
-                      <select
-                        value={contentCreatorData.rate_range}
-                        onChange={(e) => setContentCreatorData(prev => ({ ...prev, rate_range: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select rate range</option>
-                        {rateRanges.map((range) => (
-                          <option key={range.key} value={range.key}>{range.value}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Services Offered */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Services Offered</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {serviceOptions.map((service) => (
-                        <label
-                          key={service}
-                          className="flex items-center space-x-2 p-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={contentCreatorData.services_offered.includes(service)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                addToArray('services_offered', service)
-                              } else {
-                                const index = contentCreatorData.services_offered.indexOf(service)
-                                if (index > -1) removeFromArray('services_offered', index)
-                              }
-                            }}
-                            className="rounded text-blue-600"
-                          />
-                          <span className="text-sm">{service}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Portfolio Images */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Portfolio Images</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {contentCreatorData.portfolio_images.map((file, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={`Portfolio ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removePortfolioImage(index)}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {contentCreatorData.portfolio_images.length < 6 && (
-                        <label className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-500">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files || [])
-                              files.forEach(file => handleFileUpload(file, 'portfolio_images'))
-                            }}
-                            className="hidden"
-                          />
-                          <Plus className="w-6 h-6 text-gray-400" />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Social Media Links */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Social Media Links</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {['youtube', 'instagram', 'tiktok', 'twitter', 'linkedin'].map((platform) => (
-                        <div key={platform}>
-                          <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                            {platform}
-                          </label>
-                          <input
-                            type="url"
-                            value={contentCreatorData.social_media_links[platform] || ''}
-                            onChange={(e) => setContentCreatorData(prev => ({
-                              ...prev,
-                              social_media_links: {
-                                ...prev.social_media_links,
-                                [platform]: e.target.value
-                              }
-                            }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder={`https://${platform}.com/your-profile`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Additional Information */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Website URL
-                      </label>
-                      <input
-                        type="url"
-                        value={contentCreatorData.website_url}
-                        onChange={(e) => setContentCreatorData(prev => ({ ...prev, website_url: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="https://your-website.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Location
-                      </label>
-                      <input
-                        type="text"
-                        value={contentCreatorData.location}
-                        onChange={(e) => setContentCreatorData(prev => ({ ...prev, location: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="City, State/Country"
-                      />
-                    </div>
-                  </div>
-
+          {/* Content Creator Form */}
+          {activeTab === 'content-creator' && (
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tags
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Creator Name *
                     </label>
                     <input
                       type="text"
-                      value={contentCreatorData.tags}
-                      onChange={(e) => setContentCreatorData(prev => ({ ...prev, tags: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="comma, separated, tags, describing, your, content"
+                      required
+                      value={contentCreatorForm.creator_name}
+                      onChange={(e) => setContentCreatorForm(prev => ({
+                        ...prev,
+                        creator_name: e.target.value
+                      }))}
+                      className="input w-full"
+                      placeholder="Your display name"
                     />
                   </div>
-                </>
-              ) : (
-                <>
-                  {/* Product Creator Form */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Company Information</h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Company Name *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={productCreatorData.company_name}
-                          onChange={(e) => setProductCreatorData(prev => ({ ...prev, company_name: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Your company name"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Contact Person *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={productCreatorData.contact_person}
-                          onChange={(e) => setProductCreatorData(prev => ({ ...prev, contact_person: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Primary contact name"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Company Description *
-                      </label>
-                      <textarea
-                        required
-                        rows={4}
-                        value={productCreatorData.company_description}
-                        onChange={(e) => setProductCreatorData(prev => ({ ...prev, company_description: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Describe your company, products, and what you're looking for in creator partnerships..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Company Logo
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                          {productCreatorData.company_logo ? (
-                            <img
-                              src={URL.createObjectURL(productCreatorData.company_logo)}
-                              alt="Logo preview"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Upload className="w-8 h-8 text-gray-400" />
-                          )}
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleFileUpload(file, 'company_logo')
-                          }}
-                          className="hidden"
-                          id="company-logo"
-                        />
-                        <label
-                          htmlFor="company-logo"
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer flex items-center space-x-2"
-                        >
-                          <Upload className="w-4 h-4" />
-                          <span>Upload Logo</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Industry Category */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Industry Category</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {categories.filter(cat => cat.metadata.category_type.key === 'industry').map((category) => (
-                        <label
-                          key={category.id}
-                          className="flex items-center space-x-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name="industry_category"
-                            value={category.id}
-                            checked={productCreatorData.industry_category === category.id}
-                            onChange={(e) => setProductCreatorData(prev => ({ ...prev, industry_category: e.target.value }))}
-                            className="text-blue-600"
-                          />
-                          <span className="text-xl">{category.metadata.category_icon}</span>
-                          <span className="text-sm font-medium">{category.metadata.category_name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Looking For */}
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Looking For</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {lookingForOptions.map((option) => (
-                        <label
-                          key={option}
-                          className="flex items-center space-x-2 p-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={productCreatorData.looking_for.includes(option)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                addToArray('looking_for', option)
-                              } else {
-                                const index = productCreatorData.looking_for.indexOf(option)
-                                if (index > -1) removeFromArray('looking_for', index)
-                              }
-                            }}
-                            className="rounded text-blue-600"
-                          />
-                          <span className="text-sm">{option}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Budget & Project Type */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Budget Range
-                      </label>
-                      <select
-                        value={productCreatorData.budget_range}
-                        onChange={(e) => setProductCreatorData(prev => ({ ...prev, budget_range: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select budget range</option>
-                        {budgetRanges.map((range) => (
-                          <option key={range.key} value={range.key}>{range.value}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Project Type
-                      </label>
-                      <select
-                        value={productCreatorData.project_type}
-                        onChange={(e) => setProductCreatorData(prev => ({ ...prev, project_type: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select project type</option>
-                        {projectTypes.map((type) => (
-                          <option key={type.key} value={type.key}>{type.value}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Contact Information */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Website URL
-                      </label>
-                      <input
-                        type="url"
-                        value={productCreatorData.website_url}
-                        onChange={(e) => setProductCreatorData(prev => ({ ...prev, website_url: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="https://your-company.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={productCreatorData.phone_number}
-                        onChange={(e) => setProductCreatorData(prev => ({ ...prev, phone_number: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
-                  </div>
-
+                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Location
                     </label>
-                    <input
-                      type="text"
-                      value={productCreatorData.location}
-                      onChange={(e) => setProductCreatorData(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="City, State/Country"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={contentCreatorForm.location}
+                        onChange={(e) => setContentCreatorForm(prev => ({
+                          ...prev,
+                          location: e.target.value
+                        }))}
+                        className="input w-full pl-10"
+                        placeholder="City, State"
+                      />
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bio *
+                  </label>
+                  <textarea
+                    required
+                    value={contentCreatorForm.bio}
+                    onChange={(e) => setContentCreatorForm(prev => ({
+                      ...prev,
+                      bio: e.target.value
+                    }))}
+                    className="input w-full h-24 resize-none"
+                    placeholder="Tell us about your content style, audience, and what makes you unique..."
+                  />
+                </div>
+              </div>
+
+              {/* Categories & Specialties */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Content Focus</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Content Categories
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {contentCategories.map(category => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => handleArrayField('content_categories', category.id, 'content-creator')}
+                          className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                            contentCreatorForm.content_categories.includes(category.id)
+                              ? 'bg-blue-100 border-blue-300 text-blue-700'
+                              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          {category.metadata?.category_icon} {category.metadata?.category_name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tags
+                      Platform Specialties
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {['YouTube', 'Instagram', 'TikTok', 'Twitter', 'LinkedIn', 'Blog', 'Podcast', 'Twitch'].map(platform => (
+                        <button
+                          key={platform}
+                          type="button"
+                          onClick={() => handleArrayField('platform_specialties', platform, 'content-creator')}
+                          className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                            contentCreatorForm.platform_specialties.includes(platform)
+                              ? 'bg-blue-100 border-blue-300 text-blue-700'
+                              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          {platform}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Audience & Rates */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Audience & Pricing</h3>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Follower Count Range
+                    </label>
+                    <select
+                      value={contentCreatorForm.follower_count_range}
+                      onChange={(e) => setContentCreatorForm(prev => ({
+                        ...prev,
+                        follower_count_range: e.target.value
+                      }))}
+                      className="input w-full"
+                    >
+                      <option value="">Select range</option>
+                      <option value="micro">1K - 10K (Micro)</option>
+                      <option value="mid-tier">10K - 100K (Mid-tier)</option>
+                      <option value="macro">100K - 1M (Macro)</option>
+                      <option value="mega">1M+ (Mega)</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rate Range
+                    </label>
+                    <select
+                      value={contentCreatorForm.rate_range}
+                      onChange={(e) => setContentCreatorForm(prev => ({
+                        ...prev,
+                        rate_range: e.target.value
+                      }))}
+                      className="input w-full"
+                    >
+                      <option value="">Select range</option>
+                      <option value="budget">Under $500</option>
+                      <option value="mid-range">$500 - $2,000</option>
+                      <option value="premium">$2,000 - $10,000</option>
+                      <option value="enterprise">$10,000+</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Services Offered
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Sponsored Posts', 'Product Reviews', 'Brand Partnerships', 'Content Creation', 'Affiliate Marketing', 'Event Coverage', 'Consulting'].map(service => (
+                      <button
+                        key={service}
+                        type="button"
+                        onClick={() => handleArrayField('services_offered', service, 'content-creator')}
+                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                          contentCreatorForm.services_offered.includes(service)
+                            ? 'bg-blue-100 border-blue-300 text-blue-700'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {service}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Media Links */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Social Media & Website</h3>
+                
+                <div className="space-y-4">
+                  {/* Current Links */}
+                  {Object.entries(contentCreatorForm.social_media_links).length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Current Links
+                      </label>
+                      <div className="space-y-2">
+                        {Object.entries(contentCreatorForm.social_media_links).map(([platform, url]) => (
+                          <div key={platform} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                            <div className="flex items-center space-x-2">
+                              <span className="capitalize font-medium">{platform}:</span>
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                {url}
+                              </a>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeSocialMediaLink(platform)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add New Link */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Add Social Media Link
+                    </label>
+                    <div className="flex space-x-2">
+                      <select
+                        value={newSocialPlatform}
+                        onChange={(e) => setNewSocialPlatform(e.target.value)}
+                        className="input flex-shrink-0 w-32"
+                      >
+                        <option value="">Platform</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="twitter">Twitter</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="twitch">Twitch</option>
+                        <option value="website">Website</option>
+                      </select>
+                      <input
+                        type="url"
+                        value={newSocialUrl}
+                        onChange={(e) => setNewSocialUrl(e.target.value)}
+                        className="input flex-1"
+                        placeholder="https://..."
+                      />
+                      <button
+                        type="button"
+                        onClick={addSocialMediaLink}
+                        className="btn-primary px-4"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Website URL */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Website URL
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={contentCreatorForm.website_url}
+                        onChange={(e) => setContentCreatorForm(prev => ({
+                          ...prev,
+                          website_url: e.target.value
+                        }))}
+                        className="input w-full pl-10"
+                        placeholder="https://yourwebsite.com"
+                      />
+                      <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Tags & Keywords</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tags (comma-separated)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={contentCreatorForm.tags}
+                      onChange={(e) => setContentCreatorForm(prev => ({
+                        ...prev,
+                        tags: e.target.value
+                      }))}
+                      className="input w-full pl-10"
+                      placeholder="tech reviews, productivity, SaaS, tutorials"
+                    />
+                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Add relevant tags to help brands discover your content
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Product Creator Form */}
+          {activeTab === 'product-creator' && (
+            <div className="space-y-6">
+              {/* Company Info */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Company Information</h3>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Name *
                     </label>
                     <input
                       type="text"
-                      value={productCreatorData.tags}
-                      onChange={(e) => setProductCreatorData(prev => ({ ...prev, tags: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="comma, separated, tags, describing, your, industry"
+                      required
+                      value={productCreatorForm.company_name}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        company_name: e.target.value
+                      }))}
+                      className="input w-full"
+                      placeholder="Your company name"
                     />
                   </div>
-                </>
-              )}
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contact Person *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={productCreatorForm.contact_person}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        contact_person: e.target.value
+                      }))}
+                      className="input w-full"
+                      placeholder="Your name"
+                    />
+                  </div>
+                </div>
 
-              {/* Submit Button */}
-              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{isSubmitting ? 'Creating Profile...' : 'Create Profile'}</span>
-                </button>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Company Description *
+                  </label>
+                  <textarea
+                    required
+                    value={productCreatorForm.company_description}
+                    onChange={(e) => setProductCreatorForm(prev => ({
+                      ...prev,
+                      company_description: e.target.value
+                    }))}
+                    className="input w-full h-24 resize-none"
+                    placeholder="Describe your company, products, and what you're looking for in creator partnerships..."
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Website URL
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={productCreatorForm.website_url}
+                        onChange={(e) => setProductCreatorForm(prev => ({
+                          ...prev,
+                          website_url: e.target.value
+                        }))}
+                        className="input w-full pl-10"
+                        placeholder="https://yourcompany.com"
+                      />
+                      <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={productCreatorForm.phone_number}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        phone_number: e.target.value
+                      }))}
+                      className="input w-full"
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={productCreatorForm.location}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        location: e.target.value
+                      }))}
+                      className="input w-full pl-10"
+                      placeholder="City, State"
+                    />
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
               </div>
-            </form>
+
+              {/* Industry & Partnership */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Industry & Partnership Details</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Industry Category
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {industryCategories.map(category => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => setProductCreatorForm(prev => ({
+                            ...prev,
+                            industry_category: category.id
+                          }))}
+                          className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                            productCreatorForm.industry_category === category.id
+                              ? 'bg-blue-100 border-blue-300 text-blue-700'
+                              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          {category.metadata?.category_icon} {category.metadata?.category_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Looking For
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {['YouTube Creators', 'Instagram Influencers', 'TikTok Creators', 'Bloggers', 'LinkedIn Creators', 'Twitch Streamers', 'Podcast Hosts'].map(type => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => handleArrayField('looking_for', type, 'product-creator')}
+                          className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                            productCreatorForm.looking_for.includes(type)
+                              ? 'bg-blue-100 border-blue-300 text-blue-700'
+                              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Budget Range
+                    </label>
+                    <select
+                      value={productCreatorForm.budget_range}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        budget_range: e.target.value
+                      }))}
+                      className="input w-full"
+                    >
+                      <option value="">Select budget range</option>
+                      <option value="under-1k">Under $1,000</option>
+                      <option value="1k-5k">$1,000 - $5,000</option>
+                      <option value="5k-10k">$5,000 - $10,000</option>
+                      <option value="10k-25k">$10,000 - $25,000</option>
+                      <option value="25k-plus">$25,000+</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Type
+                    </label>
+                    <select
+                      value={productCreatorForm.project_type}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        project_type: e.target.value
+                      }))}
+                      className="input w-full"
+                    >
+                      <option value="">Select project type</option>
+                      <option value="product-launch">Product Launch</option>
+                      <option value="brand-awareness">Brand Awareness</option>
+                      <option value="content-series">Content Series</option>
+                      <option value="review-campaign">Review Campaign</option>
+                      <option value="ongoing-partnership">Ongoing Partnership</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Tags & Keywords</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tags (comma-separated)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={productCreatorForm.tags}
+                      onChange={(e) => setProductCreatorForm(prev => ({
+                        ...prev,
+                        tags: e.target.value
+                      }))}
+                      className="input w-full pl-10"
+                      placeholder="productivity, SaaS, B2B, workflow"
+                    />
+                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Add relevant tags to help creators discover your brand
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary px-8 py-3"
+            >
+              {isSubmitting ? 'Creating Profile...' : 'Create Profile'}
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   )
