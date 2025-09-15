@@ -1,30 +1,30 @@
-import { createBucketClient } from '@cosmicjs/sdk'
+import { createBucketClient } from "@cosmicjs/sdk";
 
 export const cosmic = createBucketClient({
   bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
   readKey: process.env.COSMIC_READ_KEY as string,
   writeKey: process.env.COSMIC_WRITE_KEY as string,
-})
+});
 
 // Error helper for Cosmic SDK
 function hasStatus(error: unknown): error is { status: number } {
-  return typeof error === 'object' && error !== null && 'status' in error;
+  return typeof error === "object" && error !== null && "status" in error;
 }
 
 // Fetch all content creators with categories
 export async function getContentCreators() {
   try {
     const response = await cosmic.objects
-      .find({ type: 'content-creators' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .find({ type: "content-creators" })
+      .props(["id", "title", "slug", "metadata"])
       .depth(1);
-    
+
     return response.objects || [];
   } catch (error) {
     if (hasStatus(error) && error.status === 404) {
       return [];
     }
-    throw new Error('Failed to fetch content creators');
+    throw new Error("Failed to fetch content creators");
   }
 }
 
@@ -32,16 +32,16 @@ export async function getContentCreators() {
 export async function getProductCreators() {
   try {
     const response = await cosmic.objects
-      .find({ type: 'product-creators' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .find({ type: "product-creators" })
+      .props(["id", "title", "slug", "metadata"])
       .depth(1);
-    
+
     return response.objects || [];
   } catch (error) {
     if (hasStatus(error) && error.status === 404) {
       return [];
     }
-    throw new Error('Failed to fetch product creators');
+    throw new Error("Failed to fetch product creators");
   }
 }
 
@@ -49,15 +49,15 @@ export async function getProductCreators() {
 export async function getCategories() {
   try {
     const response = await cosmic.objects
-      .find({ type: 'categories' })
-      .props(['id', 'title', 'slug', 'metadata']);
-    
+      .find({ type: "categories" })
+      .props(["id", "title", "slug", "metadata"]);
+
     return response.objects || [];
   } catch (error) {
     if (hasStatus(error) && error.status === 404) {
       return [];
     }
-    throw new Error('Failed to fetch categories');
+    throw new Error("Failed to fetch categories");
   }
 }
 
@@ -65,15 +65,15 @@ export async function getCategories() {
 export async function getContentCreatorBySlug(slug: string) {
   try {
     const response = await cosmic.objects
-      .findOne({ type: 'content-creators', slug })
+      .findOne({ type: "content-creators", slug })
       .depth(1);
-    
+
     return response.object;
   } catch (error) {
     if (hasStatus(error) && error.status === 404) {
       return null;
     }
-    throw new Error('Failed to fetch content creator');
+    throw new Error("Failed to fetch content creator");
   }
 }
 
@@ -81,15 +81,15 @@ export async function getContentCreatorBySlug(slug: string) {
 export async function getProductCreatorBySlug(slug: string) {
   try {
     const response = await cosmic.objects
-      .findOne({ type: 'product-creators', slug })
+      .findOne({ type: "product-creators", slug })
       .depth(1);
-    
+
     return response.object;
   } catch (error) {
     if (hasStatus(error) && error.status === 404) {
       return null;
     }
-    throw new Error('Failed to fetch product creator');
+    throw new Error("Failed to fetch product creator");
   }
 }
 
@@ -102,21 +102,21 @@ export async function sendMessage(messageData: {
 }) {
   try {
     const response = await cosmic.objects.insertOne({
-      type: 'messages',
+      type: "messages",
       title: messageData.subject,
       metadata: {
         from_product_creator: messageData.fromProductCreatorId,
         to_content_creator: messageData.toContentCreatorId,
         subject: messageData.subject,
         message_content: messageData.messageContent,
-        message_status: 'sent',
-        email_sent: false
-      }
+        message_status: "sent",
+        email_sent: false,
+      },
     });
-    
+
     return response.object;
   } catch (error) {
-    throw new Error('Failed to send message');
+    throw new Error("Failed to send message");
   }
 }
 
@@ -124,35 +124,38 @@ export async function sendMessage(messageData: {
 export async function createUserAccount(userData: {
   email: string;
   passwordHash: string;
-  accountType: 'product-creator' | 'content-creator';
+  accountType: "product-creator" | "content-creator";
   verificationToken?: string;
 }) {
   try {
     // Create the account type object structure to match existing data
-    const accountTypeValue = userData.accountType === 'content-creator' ? 'Content Creator' : 'Product Creator';
-    
+    const accountTypeValue =
+      userData.accountType === "content-creator"
+        ? "Content Creator"
+        : "Product Creator";
+
     const response = await cosmic.objects.insertOne({
-      type: 'user-accounts',
+      type: "user-accounts",
       title: `${userData.email} Account`,
       metadata: {
         email: userData.email,
         password_hash: userData.passwordHash,
         account_type: {
           key: userData.accountType,
-          value: accountTypeValue
+          value: accountTypeValue,
         },
         email_verified: false,
-        profile_reference: null,
-        email_verification_token: userData.verificationToken || null,
-        password_reset_token: null,
-        last_login: null
-      }
+        profile_reference: "",
+        email_verification_token: userData.verificationToken || "",
+        password_reset_token: "",
+        last_login: "",
+      },
     });
-    
+
     return response.object;
   } catch (error) {
-    console.error('Create user account error:', error);
-    throw new Error('Failed to create user account');
+    console.error("Create user account error:", error);
+    throw new Error("Failed to create user account");
   }
 }
 
@@ -160,18 +163,18 @@ export async function createUserAccount(userData: {
 export async function getUserByEmail(email: string) {
   try {
     const response = await cosmic.objects
-      .find({ 
-        type: 'user-accounts',
-        'metadata.email': email
+      .find({
+        type: "user-accounts",
+        "metadata.email": email,
       })
-      .props(['id', 'title', 'slug', 'metadata']);
-    
+      .props(["id", "title", "slug", "metadata"]);
+
     return response.objects[0] || null;
   } catch (error) {
     if (hasStatus(error) && error.status === 404) {
       return null;
     }
-    throw new Error('Failed to fetch user');
+    throw new Error("Failed to fetch user");
   }
 }
 
@@ -180,10 +183,10 @@ export async function updateLastLogin(userId: string) {
   try {
     await cosmic.objects.updateOne(userId, {
       metadata: {
-        last_login: new Date().toISOString().split('T')[0]
-      }
+        last_login: new Date().toISOString().split("T")[0],
+      },
     });
   } catch (error) {
-    console.error('Failed to update last login:', error);
+    console.error("Failed to update last login:", error);
   }
 }

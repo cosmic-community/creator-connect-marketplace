@@ -1,15 +1,15 @@
-import { Resend } from 'resend'
+import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email?token=${token}`
+  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email?token=${token}`;
 
   try {
     await resend.emails.send({
-      from: 'Creator Connect <noreply@creatorconnect.com>',
+      from: "Creator Connect <support@cosmicjs.com>",
       to: email,
-      subject: 'Verify your email address',
+      subject: "Verify your email address",
       html: `
         <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -40,22 +40,22 @@ export async function sendVerificationEmail(email: string, token: string) {
             <p>If you didn't create an account, please ignore this email.</p>
           </div>
         </div>
-      `
-    })
+      `,
+    });
   } catch (error) {
-    console.error('Failed to send verification email:', error)
-    throw new Error('Failed to send verification email')
+    console.error("Failed to send verification email:", error);
+    throw new Error("Failed to send verification email");
   }
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`
+  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`;
 
   try {
     await resend.emails.send({
-      from: 'Creator Connect <noreply@creatorconnect.com>',
+      from: "Creator Connect <support@cosmicjs.com>",
       to: email,
-      subject: 'Reset your password',
+      subject: "Reset your password",
       html: `
         <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -86,10 +86,10 @@ export async function sendPasswordResetEmail(email: string, token: string) {
             <p>If you didn't request a password reset, please ignore this email.</p>
           </div>
         </div>
-      `
-    })
+      `,
+    });
   } catch (error) {
-    console.error('Failed to send password reset email:', error)
-    throw new Error('Failed to send password reset email')
+    console.error("Failed to send password reset email:", error);
+    throw new Error("Failed to send password reset email");
   }
 }
