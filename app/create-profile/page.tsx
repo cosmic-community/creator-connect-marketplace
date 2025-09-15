@@ -16,12 +16,41 @@ interface SocialMediaLinks {
   [key: string]: string | undefined // Add index signature for dynamic access
 }
 
+// Define the form types explicitly
+interface ContentCreatorFormState {
+  creator_name: string
+  bio: string
+  content_categories: string[]
+  platform_specialties: string[]
+  follower_count_range: string
+  rate_range: string
+  services_offered: string[]
+  social_media_links: SocialMediaLinks
+  website_url: string
+  location: string
+  tags: string
+}
+
+interface ProductCreatorFormState {
+  company_name: string
+  contact_person: string
+  company_description: string
+  website_url: string
+  industry_category: string
+  looking_for: string[]
+  budget_range: string
+  project_type: string
+  phone_number: string
+  location: string
+  tags: string
+}
+
 export default function CreateProfilePage() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
   
   // Content Creator Form State
-  const [contentCreatorForm, setContentCreatorForm] = useState({
+  const [contentCreatorForm, setContentCreatorForm] = useState<ContentCreatorFormState>({
     creator_name: '',
     bio: '',
     content_categories: [] as string[],
@@ -36,7 +65,7 @@ export default function CreateProfilePage() {
   })
 
   // Product Creator Form State
-  const [productCreatorForm, setProductCreatorForm] = useState({
+  const [productCreatorForm, setProductCreatorForm] = useState<ProductCreatorFormState>({
     company_name: '',
     contact_person: '',
     company_description: '',
@@ -137,7 +166,7 @@ export default function CreateProfilePage() {
   // Handle social media link addition
   const addSocialMediaLink = () => {
     if (newSocialPlatform && newSocialUrl) {
-      setContentCreatorForm(prev => ({
+      setContentCreatorForm((prev: ContentCreatorFormState) => ({
         ...prev,
         social_media_links: {
           ...prev.social_media_links,
@@ -151,7 +180,7 @@ export default function CreateProfilePage() {
 
   // Handle social media link removal - Fixed the TypeScript error
   const removeSocialMediaLink = (platform: string) => {
-    setContentCreatorForm(prev => {
+    setContentCreatorForm((prev: ContentCreatorFormState) => {
       const newLinks = { ...prev.social_media_links }
       delete newLinks[platform]
       return {
@@ -167,19 +196,31 @@ export default function CreateProfilePage() {
     value: string, 
     formType: 'content-creator' | 'product-creator'
   ) => {
-    const setForm = formType === 'content-creator' ? setContentCreatorForm : setProductCreatorForm
-    
-    setForm(prev => {
-      const currentArray = (prev as any)[field] || []
-      const newArray = currentArray.includes(value)
-        ? currentArray.filter((item: string) => item !== value)
-        : [...currentArray, value]
-      
-      return {
-        ...prev,
-        [field]: newArray
-      }
-    })
+    if (formType === 'content-creator') {
+      setContentCreatorForm((prev: ContentCreatorFormState) => {
+        const currentArray = (prev as any)[field] || []
+        const newArray = currentArray.includes(value)
+          ? currentArray.filter((item: string) => item !== value)
+          : [...currentArray, value]
+        
+        return {
+          ...prev,
+          [field]: newArray
+        }
+      })
+    } else {
+      setProductCreatorForm((prev: ProductCreatorFormState) => {
+        const currentArray = (prev as any)[field] || []
+        const newArray = currentArray.includes(value)
+          ? currentArray.filter((item: string) => item !== value)
+          : [...currentArray, value]
+        
+        return {
+          ...prev,
+          [field]: newArray
+        }
+      })
+    }
   }
 
   // Filter categories by type
@@ -261,7 +302,7 @@ export default function CreateProfilePage() {
                       type="text"
                       required
                       value={contentCreatorForm.creator_name}
-                      onChange={(e) => setContentCreatorForm(prev => ({
+                      onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                         ...prev,
                         creator_name: e.target.value
                       }))}
@@ -278,7 +319,7 @@ export default function CreateProfilePage() {
                       <input
                         type="text"
                         value={contentCreatorForm.location}
-                        onChange={(e) => setContentCreatorForm(prev => ({
+                        onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                           ...prev,
                           location: e.target.value
                         }))}
@@ -297,7 +338,7 @@ export default function CreateProfilePage() {
                   <textarea
                     required
                     value={contentCreatorForm.bio}
-                    onChange={(e) => setContentCreatorForm(prev => ({
+                    onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                       ...prev,
                       bio: e.target.value
                     }))}
@@ -369,7 +410,7 @@ export default function CreateProfilePage() {
                     </label>
                     <select
                       value={contentCreatorForm.follower_count_range}
-                      onChange={(e) => setContentCreatorForm(prev => ({
+                      onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                         ...prev,
                         follower_count_range: e.target.value
                       }))}
@@ -389,7 +430,7 @@ export default function CreateProfilePage() {
                     </label>
                     <select
                       value={contentCreatorForm.rate_range}
-                      onChange={(e) => setContentCreatorForm(prev => ({
+                      onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                         ...prev,
                         rate_range: e.target.value
                       }))}
@@ -506,7 +547,7 @@ export default function CreateProfilePage() {
                       <input
                         type="url"
                         value={contentCreatorForm.website_url}
-                        onChange={(e) => setContentCreatorForm(prev => ({
+                        onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                           ...prev,
                           website_url: e.target.value
                         }))}
@@ -531,7 +572,7 @@ export default function CreateProfilePage() {
                     <input
                       type="text"
                       value={contentCreatorForm.tags}
-                      onChange={(e) => setContentCreatorForm(prev => ({
+                      onChange={(e) => setContentCreatorForm((prev: ContentCreatorFormState) => ({
                         ...prev,
                         tags: e.target.value
                       }))}
@@ -564,7 +605,7 @@ export default function CreateProfilePage() {
                       type="text"
                       required
                       value={productCreatorForm.company_name}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         company_name: e.target.value
                       }))}
@@ -581,7 +622,7 @@ export default function CreateProfilePage() {
                       type="text"
                       required
                       value={productCreatorForm.contact_person}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         contact_person: e.target.value
                       }))}
@@ -598,7 +639,7 @@ export default function CreateProfilePage() {
                   <textarea
                     required
                     value={productCreatorForm.company_description}
-                    onChange={(e) => setProductCreatorForm(prev => ({
+                    onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                       ...prev,
                       company_description: e.target.value
                     }))}
@@ -616,7 +657,7 @@ export default function CreateProfilePage() {
                       <input
                         type="url"
                         value={productCreatorForm.website_url}
-                        onChange={(e) => setProductCreatorForm(prev => ({
+                        onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                           ...prev,
                           website_url: e.target.value
                         }))}
@@ -634,7 +675,7 @@ export default function CreateProfilePage() {
                     <input
                       type="tel"
                       value={productCreatorForm.phone_number}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         phone_number: e.target.value
                       }))}
@@ -652,7 +693,7 @@ export default function CreateProfilePage() {
                     <input
                       type="text"
                       value={productCreatorForm.location}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         location: e.target.value
                       }))}
@@ -678,7 +719,7 @@ export default function CreateProfilePage() {
                         <button
                           key={category.id}
                           type="button"
-                          onClick={() => setProductCreatorForm(prev => ({
+                          onClick={() => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                             ...prev,
                             industry_category: category.id
                           }))}
@@ -724,7 +765,7 @@ export default function CreateProfilePage() {
                     </label>
                     <select
                       value={productCreatorForm.budget_range}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         budget_range: e.target.value
                       }))}
@@ -745,7 +786,7 @@ export default function CreateProfilePage() {
                     </label>
                     <select
                       value={productCreatorForm.project_type}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         project_type: e.target.value
                       }))}
@@ -774,7 +815,7 @@ export default function CreateProfilePage() {
                     <input
                       type="text"
                       value={productCreatorForm.tags}
-                      onChange={(e) => setProductCreatorForm(prev => ({
+                      onChange={(e) => setProductCreatorForm((prev: ProductCreatorFormState) => ({
                         ...prev,
                         tags: e.target.value
                       }))}
